@@ -1,6 +1,5 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-# from django.views.decorators.http import require_http_methods
 from django.shortcuts import get_object_or_404
 from .models import Event, Attendee
 from .serializers import EventSerializer, AttendeeSerializer
@@ -22,19 +21,19 @@ def show_all_attendees(request):
 def add_event(request):
     if request.method == "POST":
         try:
-            data = json.loads(request.body.decode('utf-8'))  # Convert byte data to dict
+            data = json.loads(request.body.decode('utf-8'))  
         except json.JSONDecodeError as e:
             return JsonResponse({"error": f"Invalid JSON format: {str(e)}"}, status=400)
 
-        # Create serializer instance with the parsed data
+        # Creating serializer instance with the parsed data
         serializer = EventSerializer(data=data)
 
-        if serializer.is_valid():  # Validate the data
-            serializer.save()  # Save the event
+        if serializer.is_valid(): 
+            serializer.save() 
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
     
-    # Return method not allowed if not POST
+
     return JsonResponse({"error": "This endpoint only supports POST requests"}, status=405)
 
 # Add attendee
@@ -59,11 +58,11 @@ def update_event(request):
             return JsonResponse({"error": f"Invalid JSON format: {str(e)}"}, status=400)
 
         event = get_object_or_404(Event, id=event_id)
-        serializer = EventSerializer(event, data=data, partial=True)  # Allow partial updates
+        serializer = EventSerializer(event, data=data, partial=True)
 
         if serializer.is_valid():
             serializer.save()
-            # Update attendees related to the event if event details change (e.g., name or location)
+
             if 'name' in data or 'location' in data:
                 Attendee.objects.filter(event=event).update(event=event)
             return JsonResponse(serializer.data, status=200)
@@ -82,7 +81,7 @@ def update_attendee(request):
             return JsonResponse({"error": f"Invalid JSON format: {str(e)}"}, status=400)
 
         attendee = get_object_or_404(Attendee, id=attendee_id)
-        serializer = AttendeeSerializer(attendee, data=data, partial=True)  # Allow partial updates
+        serializer = AttendeeSerializer(attendee, data=data, partial=True)  
 
         if serializer.is_valid():
             serializer.save()
@@ -123,7 +122,7 @@ def filter_events(request):
     serializer = EventSerializer(events, many=True)
     return JsonResponse(serializer.data, safe=False)
 
-# Filter attendees by event
+# Filter attendees by name
 def filter_attendees(request):
     name = request.GET.get('name')
     if not name:

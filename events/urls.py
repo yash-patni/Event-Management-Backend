@@ -1,10 +1,9 @@
 from django.urls import path
-# from rest_framework.routers import DefaultRouter
-# from .views import EventViewSet, AttendeeViewSet
 from . import views
 
 
 urlpatterns = [
+    # Events routes
     path('events/', views.show_all_events, name='show_all_events'),
     path('events/add/', views.add_event, name='add_event'),
     path('events/remove/', views.remove_event, name='remove_event'),

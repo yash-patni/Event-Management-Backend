@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
+# from django.views.decorators.http import require_http_methods
 from django.shortcuts import get_object_or_404
 from .models import Event, Attendee
 from .serializers import EventSerializer, AttendeeSerializer
@@ -18,22 +18,10 @@ def show_all_attendees(request):
     serializer = AttendeeSerializer(attendees, many=True)
     return JsonResponse(serializer.data, safe=False)
 
-# Add event
-# @csrf_exempt
-# def add_event(request):
-#     if request.method == "POST":
-#         print("added")
-#         data = json.loads(request.body)
-#         serializer = EventSerializer(data=data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return JsonResponse(serializer.data, status=201)
-#         return JsonResponse(serializer.errors, status=400)
 @csrf_exempt
 def add_event(request):
     if request.method == "POST":
         try:
-            # Decode the request body (bytes to str) and parse it into a dictionary
             data = json.loads(request.body.decode('utf-8'))  # Convert byte data to dict
         except json.JSONDecodeError as e:
             return JsonResponse({"error": f"Invalid JSON format: {str(e)}"}, status=400)
@@ -59,6 +47,49 @@ def add_attendee(request):
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
+
+# Update event and related attendees
+@csrf_exempt
+def update_event(request):
+    if request.method == "PUT":
+        event_id = request.GET.get('event_id')
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except json.JSONDecodeError as e:
+            return JsonResponse({"error": f"Invalid JSON format: {str(e)}"}, status=400)
+
+        event = get_object_or_404(Event, id=event_id)
+        serializer = EventSerializer(event, data=data, partial=True)  # Allow partial updates
+
+        if serializer.is_valid():
+            serializer.save()
+            # Update attendees related to the event if event details change (e.g., name or location)
+            if 'name' in data or 'location' in data:
+                Attendee.objects.filter(event=event).update(event=event)
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+
+    return JsonResponse({"error": "This endpoint only supports PUT requests"}, status=405)
+
+# Update attendee
+@csrf_exempt
+def update_attendee(request):
+    if request.method == "PUT":
+        attendee_id = request.GET.get('attendee_id')
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except json.JSONDecodeError as e:
+            return JsonResponse({"error": f"Invalid JSON format: {str(e)}"}, status=400)
+
+        attendee = get_object_or_404(Attendee, id=attendee_id)
+        serializer = AttendeeSerializer(attendee, data=data, partial=True)  # Allow partial updates
+
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.errors, status=400)
+
+    return JsonResponse({"error": "This endpoint only supports PUT requests"}, status=405)
 
 # Remove event
 @csrf_exempt
@@ -100,31 +131,3 @@ def filter_attendees(request):
     attendees = Attendee.objects.filter(name=name)
     serializer = AttendeeSerializer(attendees, many=True)
     return JsonResponse(serializer.data, safe=False)
-
-###################################################################################
-
-# from django.shortcuts import render
-
-# # Create your views here.
-# from rest_framework.viewsets import ModelViewSet
-# from rest_framework import filters
-# from django_filters.rest_framework import DjangoFilterBackend
-# from .models import Event, Attendee
-# from .serializers import EventSerializer, AttendeeSerializer
-
-# class EventViewSet(ModelViewSet):
-#     queryset = Event.objects.all()
-#     serializer_class = EventSerializer
-#     filter_backends =  [DjangoFilterBackend, filters.SearchFilter]
-#     filterset_fields = ['date', 'location']
-#     search_fields = ['name']
-
-# class AttendeeViewSet(ModelViewSet):
-#     queryset = Attendee.objects.all()
-#     serializer_class = AttendeeSerializer
-#     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-#     filterset_fields = ['event']
-#     search_fields = ['name']
-
-# # def frontend(request):
-# #     return render(request, 'index.html')
